@@ -17,36 +17,31 @@ const AutoHashMap = std.AutoHashMap;
 const Answer = utils.NumericAnswer(usize);
 
 const ResType = enum { ore, clay, obsidian };
+const BotChoice = enum { ore, clay, obsidian, geode, doNothing };
 
-const ResourcePile = struct {
+const RecipeCost = struct {
     ore: u8 = 0,
     clay: u8 = 0,
     obsidian: u8 = 0,
-
-    fn cloneWithDifference(self: *const ResourcePile, amounts: ResourcePile) ResourcePile {
-        return ResourcePile{ .ore = self.ore - amounts.ore, .clay = self.clay - amounts.clay, .obsidian = self.obsidian - amounts.obsidian };
-    }
-
-    fn hasEnough(self: ResourcePile, amounts: ResourcePile) bool {
-        return self.ore >= amounts.ore and self.clay >= amounts.clay and self.obsidian >= amounts.obsidian;
-    }
 };
 
+const ZERO_COSTS = RecipeCost{};
+
 const Blueprint = struct {
-    ore_bot: ResourcePile,
-    clay_bot: ResourcePile,
-    obsidian_bot: ResourcePile,
-    geode_bot: ResourcePile,
-    max_costs: ResourcePile,
+    ore_bot: RecipeCost,
+    clay_bot: RecipeCost,
+    obsidian_bot: RecipeCost,
+    geode_bot: RecipeCost,
+    max_costs: RecipeCost,
 
     pub fn fromStr(spec: str) Blueprint {
         const col_pos = std.mem.indexOfScalar(u8, spec, ':').?;
         var robots = std.mem.tokenize(u8, spec[col_pos..], ".");
         var bot_index: u8 = 0;
-        var piles: [4]ResourcePile = undefined;
-        var maxes = ResourcePile{};
+        var piles: [4]RecipeCost = undefined;
+        var maxes = RecipeCost{};
         while (robots.next()) |bot| {
-            var total_cost = ResourcePile{};
+            var total_cost = RecipeCost{};
             const costs_pos = std.mem.indexOf(u8, bot, "costs ").?;
             var costs = std.mem.split(u8, bot[costs_pos + 5 ..], " and ");
             while (costs.next()) |cost| {
@@ -84,26 +79,75 @@ const Blueprint = struct {
     }
 };
 
-const State = struct {
-    ticks: u8 = 0,
-    ore_bots: u8 = 1,
-    clay_bots: u8 = 0,
-    obsidian_bots: u8 = 0,
-    geode_bots: u8 = 0,
+const Assets = packed struct(u64) {
     geodes: u8 = 0,
-    resources: ResourcePile = ResourcePile{},
+    obsidian: u8 = 0,
+    clay: u8 = 0,
+    ore: u8 = 0,
+    geode_bots: u8 = 0,
+    obsidian_bots: u8 = 0,
+    clay_bots: u8 = 0,
+    ore_bots: u8 = 1,
 
-    pub fn tickClone(self: State, expenditure: ?ResourcePile) State {
-        var to_spend = ResourcePile{};
-        if (expenditure) |actual_cost| {
-            to_spend = actual_cost;
+    pub fn format(
+        self: Assets,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = fmt;
+        _ = options;
+        try writer.print("OB={d},CB={d},ObB={d},GB={d},G={d},Ob={d},C={d},O={d}", .{ self.ore_bots, self.clay_bots, self.obsidian_bots, self.geode_bots, self.geodes, self.obsidian, self.clay, self.ore });
+    }
+
+    pub fn hasEnough(self: Assets, cost: RecipeCost) bool {
+        return self.ore >= cost.ore and self.clay >= cost.clay and self.obsidian >= cost.obsidian;
+    }
+
+    pub fn tick(self: *const Assets, blueprint: *const Blueprint, build_type: BotChoice) Assets {
+        var new = Assets{
+            .geodes = self.geodes + self.geode_bots,
+            .obsidian = self.obsidian + self.obsidian_bots,
+            .clay = self.clay + self.clay_bots,
+            .ore = self.ore + self.ore_bots,
+            .geode_bots = self.geode_bots,
+            .obsidian_bots = self.obsidian_bots,
+            .clay_bots = self.clay_bots,
+            .ore_bots = self.ore_bots,
+        };
+        var costs: RecipeCost = ZERO_COSTS;
+        switch (build_type) {
+            .doNothing => {},
+            .obsidian => {
+                new.obsidian_bots += 1;
+                costs = blueprint.obsidian_bot;
+            },
+            .clay => {
+                new.clay_bots += 1;
+                costs = blueprint.clay_bot;
+            },
+            .ore => {
+                new.ore_bots += 1;
+                costs = blueprint.ore_bot;
+            },
+            .geode => {
+                new.geode_bots += 1;
+                costs = blueprint.geode_bot;
+            },
         }
-        var new = State{ .ticks = self.ticks + 1, .ore_bots = self.ore_bots, .clay_bots = self.clay_bots, .obsidian_bots = self.obsidian_bots, .geode_bots = self.geode_bots, .geodes = self.geodes + self.geode_bots, .resources = self.resources.cloneWithDifference(to_spend) };
-        new.resources.ore += self.ore_bots;
-        new.resources.clay += self.clay_bots;
-        new.resources.obsidian += self.obsidian_bots;
+
+        new.ore -= costs.ore;
+        new.clay -= costs.clay;
+        new.obsidian -= costs.obsidian;
+
         return new;
     }
+};
+
+const State = struct {
+    ticks: u8 = 0,
+    things: Assets = Assets{},
+    ctx: *const Blueprint,
 
     pub fn format(
         self: State,
@@ -113,38 +157,32 @@ const State = struct {
     ) !void {
         _ = fmt;
         _ = options;
-        try writer.print("T@{d},OB={d},CB={d},ObB={d},GB={d},G={d},R={}", .{ self.ticks, self.ore_bots, self.clay_bots, self.obsidian_bots, self.geode_bots, self.geodes, self.resources });
+        try writer.print("T@{d},{}", .{ self.ticks, self.things });
+    }
+
+    pub fn tickClone(self: State, build_type: BotChoice) State {
+        return State{ .ticks = self.ticks + 1, .things = self.things.tick(self.ctx, build_type), .ctx = self.ctx };
     }
 };
 
 /// This function is used in a priotity queue, which means returning Order.lt if "a" is more important,
 /// Order.gt if "b" is more important, or Order.eq if it doesn't matter.
-/// In run-of-the-mill pathfinding A*, this is usually done by comparing "FScores", and prioritising
-/// states with lower values, because they represent likely cheaper/quicker paths.
-/// For this problem though, all paths are the same "distance", and the more promising ones are
+/// For this problem, all paths are the same "distance", and the more promising ones are
 /// the ones that give more geodes/obsidian/clay. That's why we reverse a and b in the order
-/// calls inside — bigger is better.
-fn computePrioritisationHeuristic(_: *AutoHashMap(State, usize), a: State, b: State) std.math.Order {
-    //TODO: Replace this mess with an elementwise comparison?
-    const geode_compare = std.math.order(b.geodes, a.geodes);
-    if (geode_compare == std.math.Order.eq) {
-        const obs_compare = std.math.order(b.resources.obsidian, a.resources.obsidian);
-        if (obs_compare == std.math.Order.eq) {
-            const clay_compare = std.math.order(b.resources.clay, a.resources.clay);
-            if (clay_compare == std.math.Order.eq) {
-                return std.math.order(b.resources.ore, a.resources.ore);
-            } else return clay_compare;
-        } else return obs_compare;
-    } else return geode_compare;
+/// calls inside — bigger is better. A and B are also packed structs designed explicitly
+/// to work with this ordering.
+fn computePrioritisationHeuristic(_: void, a: State, b: State) std.math.Order {
+    // The structs are aligned such that we can just compare them as ints
+    return std.math.order(@bitCast(u64, b.things), @bitCast(u64, a.things));
 }
 
 const AStarOpenSet = struct {
-    q: PriorityQueue(State, *AutoHashMap(State, usize), computePrioritisationHeuristic),
+    q: PriorityQueue(State, void, computePrioritisationHeuristic),
     q_map: AutoHashMap(State, void),
     len: usize,
 
-    fn init(allocator: Allocator, estimated_node_journey_costss: *AutoHashMap(State, usize)) AStarOpenSet {
-        return AStarOpenSet{ .q = PriorityQueue(State, *AutoHashMap(State, usize), computePrioritisationHeuristic).init(allocator, estimated_node_journey_costss), .q_map = AutoHashMap(State, void).init(allocator), .len = 0 };
+    fn init(allocator: Allocator) AStarOpenSet {
+        return AStarOpenSet{ .q = PriorityQueue(State, void, computePrioritisationHeuristic).init(allocator, {}), .q_map = AutoHashMap(State, void).init(allocator), .len = 0 };
     }
     fn deinit(self: *AStarOpenSet) void {
         self.q.deinit();
@@ -167,7 +205,6 @@ const AStarOpenSet = struct {
     }
 };
 
-const BotChoice = enum { ore, clay, obsidian, geode, doNothing };
 const NeighbourIterator = struct {
     current_state: *const State,
     blueprint: *const Blueprint,
@@ -183,36 +220,29 @@ const NeighbourIterator = struct {
                 switch (last) {
                     .ore => {
                         self.last_tried_neighbour = BotChoice.clay;
-                        if (current_state.clay_bots < blueprint.max_costs.clay and current_state.resources.hasEnough(blueprint.clay_bot)) {
-                            var clay_bot_made_state = current_state.tickClone(blueprint.clay_bot);
-                            clay_bot_made_state.clay_bots += 1;
-                            // print("--->Clay seems possible {}\n", .{clay_bot_made_state});
+                        if (current_state.things.clay_bots < blueprint.max_costs.clay and current_state.things.hasEnough(blueprint.clay_bot)) {
+                            var clay_bot_made_state = current_state.tickClone(BotChoice.clay);
                             break :botloop clay_bot_made_state;
                         }
                     },
                     .clay => {
                         self.last_tried_neighbour = BotChoice.obsidian;
-                        if (current_state.obsidian_bots < blueprint.max_costs.obsidian and current_state.resources.hasEnough(blueprint.obsidian_bot)) {
-                            var obs_bot_made_state = current_state.tickClone(blueprint.obsidian_bot);
-                            obs_bot_made_state.obsidian_bots += 1;
-                            // print("--->Obsidian seems possible {}\n", .{obs_bot_made_state});
+                        if (current_state.things.obsidian_bots < blueprint.max_costs.obsidian and current_state.things.hasEnough(blueprint.obsidian_bot)) {
+                            var obs_bot_made_state = current_state.tickClone(BotChoice.obsidian);
                             break :botloop obs_bot_made_state;
                         }
                     },
                     .obsidian => {
                         self.last_tried_neighbour = BotChoice.geode;
-                        if (current_state.resources.hasEnough(blueprint.geode_bot)) {
-                            var geode_bot_made_state = current_state.tickClone(blueprint.geode_bot);
-                            geode_bot_made_state.geode_bots += 1;
-                            // print("--->Geode seems possible {}\n", .{geode_bot_made_state});
+                        if (current_state.things.hasEnough(blueprint.geode_bot)) {
+                            var geode_bot_made_state = current_state.tickClone(BotChoice.geode);
                             break :botloop geode_bot_made_state;
                         }
                     },
                     .geode => {
                         // We can always do nothing
                         self.last_tried_neighbour = BotChoice.doNothing;
-                        var idle_tick = current_state.tickClone(null);
-                        // print("--->Idle thumbs it is {}\n", .{idle_tick});
+                        var idle_tick = current_state.tickClone(BotChoice.doNothing);
                         break :botloop idle_tick;
                     },
                     .doNothing => {
@@ -222,12 +252,9 @@ const NeighbourIterator = struct {
             }
             // Nothing yielded, try ore
             else {
-                // print("Checking Neighbours For {}\n", .{self.current_state});
                 self.last_tried_neighbour = BotChoice.ore;
-                if (current_state.ore_bots < blueprint.max_costs.ore and current_state.resources.hasEnough(blueprint.ore_bot)) {
-                    var ore_bot_made_state = current_state.tickClone(blueprint.ore_bot);
-                    ore_bot_made_state.ore_bots += 1;
-                    // print("--->Ore seems possible {}\n", .{ore_bot_made_state});
+                if (current_state.things.ore_bots < blueprint.max_costs.ore and current_state.things.hasEnough(blueprint.ore_bot)) {
+                    var ore_bot_made_state = current_state.tickClone(BotChoice.ore);
                     break :botloop ore_bot_made_state;
                 }
             }
@@ -238,28 +265,23 @@ const NeighbourIterator = struct {
 
 const Context = struct { blueprint: Blueprint, max_ticks: usize };
 
-fn doAStarIsh(context: Context, allocator: Allocator, prog_node: *std.Progress.Node) !usize {
+fn exploreStateSpace(context: Context, allocator: Allocator, prog_node: *std.Progress.Node) !usize {
     const blueprint = context.blueprint;
-    const starting_state = State{};
+    const starting_state = State{ .ctx = &context.blueprint };
 
     var state_prog = std.Progress{ .root = prog_node.* };
     var state_prog_node = state_prog.start("States", 0);
 
-    // In literature this is referred to as the "F score" because maths ¯\_(ツ)_/¯
-    var estimated_node_journey_costs = AutoHashMap(State, usize).init(allocator);
-    defer estimated_node_journey_costs.deinit();
-    try estimated_node_journey_costs.put(starting_state, 0);
-
     // Referred to as the "open set" because it is the set of nodes open for
     // further investigation.
-    var open_set = AStarOpenSet.init(allocator, &estimated_node_journey_costs);
+    var open_set = AStarOpenSet.init(allocator);
     defer open_set.deinit();
     open_set.enqueue(starting_state);
 
     // In literature this is referred to as the "G score" because maths ¯\_(ツ)_/¯
-    var confirmed_node_journey_costs = AutoHashMap(State, usize).init(allocator);
-    defer confirmed_node_journey_costs.deinit();
-    try confirmed_node_journey_costs.put(starting_state, 0);
+    var confirmed_geode_amounts = AutoHashMap(State, void).init(allocator);
+    defer confirmed_geode_amounts.deinit();
+    try confirmed_geode_amounts.put(starting_state, {});
 
     var current_state: State = undefined;
 
@@ -268,13 +290,12 @@ fn doAStarIsh(context: Context, allocator: Allocator, prog_node: *std.Progress.N
     while (open_set.len > 0) {
         current_state = open_set.pop();
         state_prog_node.completeOne();
-        // print("Exploring {}\n", .{current_state});
 
         const ticks_remaining = context.max_ticks - current_state.ticks;
-        if (current_state.geodes > max_reached_geodes) {
-            max_reached_geodes = current_state.geodes;
+        if (current_state.things.geodes > max_reached_geodes) {
+            max_reached_geodes = current_state.things.geodes;
         }
-        try confirmed_node_journey_costs.put(current_state, current_state.geodes);
+        try confirmed_geode_amounts.put(current_state, {});
 
         // No time to bother with any subsequent states
         if (ticks_remaining == 0) continue;
@@ -283,12 +304,10 @@ fn doAStarIsh(context: Context, allocator: Allocator, prog_node: *std.Progress.N
         // every single tick, is the triangular number of the remaining ticks, plus
         // however many geode bots we have now multiplied by those ticks, plus
         // however many geodes we have now
-        const theoretical_max_geodes = @divExact((ticks_remaining * (ticks_remaining + 1)), 2) + (current_state.geode_bots * ticks_remaining) + current_state.geodes;
+        const theoretical_max_geodes = @divExact((ticks_remaining * (ticks_remaining + 1)), 2) + (current_state.things.geode_bots * ticks_remaining) + current_state.things.geodes;
 
-        // print("ticks_remaining {d}, max_reached_geodes {d}, theoretical_max {d}\n", .{ ticks_remaining, max_reached_geodes, theoretical_max_geodes });
         if (theoretical_max_geodes <= max_reached_geodes) {
             // Nothing to see here, don't bother.
-            // print("->>SKIPPING!\n", .{});
             continue;
         }
 
@@ -298,8 +317,8 @@ fn doAStarIsh(context: Context, allocator: Allocator, prog_node: *std.Progress.N
             // All states are 1 tick away from their neighbouring states
             // We aren't actually all that interested in shortest-path calculations here,
             // just to get the maximum value of geodes. If we've seen a state already,
-            // don't bother with it again.
-            var existing_cost_to_reach_neighbour = confirmed_node_journey_costs.get(neighbour);
+            // don't bother with it again, as it can't give us any new info.
+            var existing_cost_to_reach_neighbour = confirmed_geode_amounts.get(neighbour);
             if (existing_cost_to_reach_neighbour == null and !open_set.contains(neighbour)) {
                 open_set.enqueue(neighbour);
             }
@@ -325,7 +344,7 @@ pub fn solve(content: str, allocator: Allocator) !Answer {
     root_progress.refresh();
     var part_1: usize = 0;
     for (blueprints.items, 0..) |bp, i| {
-        const best_geodes = try doAStarIsh(Context{ .blueprint = bp, .max_ticks = 24 }, allocator, p1_node);
+        const best_geodes = try exploreStateSpace(Context{ .blueprint = bp, .max_ticks = 24 }, allocator, p1_node);
         part_1 += (i + 1) * best_geodes;
         p1_node.completeOne();
     }
@@ -334,25 +353,13 @@ pub fn solve(content: str, allocator: Allocator) !Answer {
     var p2_node = root_progress.start("Part 2", 3);
     root_progress.refresh();
     for (blueprints.items[0..@min(3, blueprints.items.len)]) |bp| {
-        const best_geodes = try doAStarIsh(Context{ .blueprint = bp, .max_ticks = 32 }, allocator, p2_node);
+        const best_geodes = try exploreStateSpace(Context{ .blueprint = bp, .max_ticks = 32 }, allocator, p2_node);
         part_2 *= best_geodes;
         p2_node.completeOne();
     }
     p2_node.end();
 
     return Answer{ .part_1 = part_1, .part_2 = part_2 };
-}
-
-fn doTheFirstOne(allocator: Allocator) !usize {
-    var blueprints = std.ArrayList(Blueprint).init(allocator);
-    defer blueprints.deinit();
-
-    var lines = std.mem.tokenize(u8, example, "\n");
-    while (lines.next()) |l| {
-        blueprints.append(Blueprint.fromStr(l)) catch unreachable;
-    }
-
-    return try doAStarIsh(Context{ .blueprint = blueprints.items[0], .max_ticks = 24 }, allocator);
 }
 
 pub fn main() !void {
