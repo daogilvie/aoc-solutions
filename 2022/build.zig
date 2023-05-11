@@ -2,7 +2,7 @@ const std = @import("std");
 
 const compstr = *const [14:0]u8;
 
-const daycount = 19;
+const daycount = 20;
 
 const days: [daycount]compstr = blk: {
     var days_inner: [daycount]compstr = undefined;
