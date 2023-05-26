@@ -29,7 +29,7 @@ fn solve(contents: []const u8, allocator: Allocator) !Answer {
     var sorted = try calorie_list.toOwnedSlice();
     defer allocator.free(sorted);
 
-    std.sort.sort(usize, sorted, {}, descending);
+    std.mem.sort(usize, sorted, {}, descending);
 
     return Answer{ .part_1 = sorted[0], .part_2 = sorted[0] + sorted[1] + sorted[2] };
 }

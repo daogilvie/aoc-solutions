@@ -110,7 +110,7 @@ fn generateSegmentsForLine(target_y: isize, sensors: ArrayList(Point), beacons: 
         maximally_combined = true;
         var sorted_slice = segments.toOwnedSlice() catch unreachable;
         segments = ArrayList(Segment).init(allocator);
-        std.sort.sort(Segment, sorted_slice, {}, sortSegments);
+        std.mem.sort(Segment, sorted_slice, {}, sortSegments);
         var current_segment = sorted_slice[0];
         for (sorted_slice[1..]) |test_segment| {
             if (current_segment.combineWith(test_segment)) |combined| {

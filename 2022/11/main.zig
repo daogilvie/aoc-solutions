@@ -119,7 +119,7 @@ fn determineMonkeyBusiness(monkehs: *ArrayList(Monkey), allocator: Allocator) us
     for (monkehs.items, 0..) |monkeh, index| {
         inspection_counts[index] = monkeh.inspection_count;
     }
-    std.sort.sort(usize, inspection_counts, {}, descending);
+    std.mem.sort(usize, inspection_counts, {}, descending);
     return inspection_counts[0] * inspection_counts[1];
 }
 

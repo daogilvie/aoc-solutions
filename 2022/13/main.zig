@@ -174,7 +174,7 @@ pub fn solve(content: str, allocator: Allocator) !Answer {
     packets.append(parseStrComplete("[[6]]", allocator)) catch unreachable;
     var sortable = packets.toOwnedSlice() catch unreachable;
     defer deinitPackets(sortable, allocator);
-    std.sort.sort(ListEntry, sortable, allocator, orderPackets);
+    std.mem.sort(ListEntry, sortable, allocator, orderPackets);
     var part_2: usize = 1;
     for (sortable, 0..) |entry, index| {
         if (entry.list.len == 1) {

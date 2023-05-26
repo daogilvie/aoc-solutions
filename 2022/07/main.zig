@@ -95,7 +95,7 @@ pub fn solve(contents: []const u8, allocator: Allocator) !Answer {
     }
 
     var values: []usize = dir_size_map.values();
-    std.sort.sort(usize, values, {}, ascending);
+    std.mem.sort(usize, values, {}, ascending);
 
     var part_1_answer: usize = 0;
     {
