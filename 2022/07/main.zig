@@ -21,7 +21,7 @@ const TARGET_USAGE: usize = CAPACITY - 30000000;
 fn makePrefixedName(dir_stack: ArrayList([]u8), dirname: []const u8, allocator: Allocator) []u8 {
     // Base case
     if (dir_stack.items.len == 0) {
-        var bytes: []u8 = allocator.alloc(u8, dirname.len) catch unreachable;
+        const bytes: []u8 = allocator.alloc(u8, dirname.len) catch unreachable;
         std.mem.copy(u8, bytes, dirname);
         return bytes;
     } else {
@@ -70,7 +70,7 @@ pub fn solve(contents: []const u8, allocator: Allocator) !Answer {
             } else if (std.mem.endsWith(u8, line, "..")) {
                 // Pop back up a dir and deallocate the name buffer for
                 // the dir like a good citizen.
-                var item = dir_stack.pop();
+                const item = dir_stack.pop();
                 allocator.free(item);
             } else {
                 // ASSUMPTION: A cd line like this is descending into a new dir
@@ -78,12 +78,12 @@ pub fn solve(contents: []const u8, allocator: Allocator) !Answer {
             }
         } else if (!std.mem.startsWith(u8, line, "dir")) {
             var parts = std.mem.tokenize(u8, line, " ");
-            var filesize = try std.fmt.parseInt(usize, parts.next().?, 10);
+            const filesize = try std.fmt.parseInt(usize, parts.next().?, 10);
             // This filesize counts for every directory in the stack,
             // so lets update them all, plus add it to the full sum for the
             // root directory.
             for (dir_stack.items) |nested_dirname| {
-                var entry = try dir_size_map.getOrPut(nested_dirname);
+                const entry = try dir_size_map.getOrPut(nested_dirname);
                 if (!entry.found_existing) {
                     entry.value_ptr.* = filesize;
                 } else {
@@ -94,7 +94,7 @@ pub fn solve(contents: []const u8, allocator: Allocator) !Answer {
         }
     }
 
-    var values: []usize = dir_size_map.values();
+    const values: []usize = dir_size_map.values();
     std.mem.sort(usize, values, {}, ascending);
 
     var part_1_answer: usize = 0;
@@ -108,7 +108,7 @@ pub fn solve(contents: []const u8, allocator: Allocator) !Answer {
     }
 
     std.mem.reverse(usize, values);
-    var part_2_answer = for (values, 0..) |filesize, index| {
+    const part_2_answer = for (values, 0..) |filesize, index| {
         const test_total = full_sum - filesize;
         if (test_total > TARGET_USAGE) break values[index - 1];
     } else unreachable;
@@ -128,7 +128,7 @@ pub fn main() !void {
 }
 
 test "day 7 worked example" {
-    var answer = try solve(example, std.testing.allocator);
+    const answer = try solve(example, std.testing.allocator);
     std.testing.expect(answer.part_1 == 95437) catch |err| {
         print("{d} is not 95437\n", .{answer.part_1});
         return err;

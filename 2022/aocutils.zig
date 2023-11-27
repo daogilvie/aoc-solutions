@@ -64,11 +64,11 @@ fn PermutationsIterator() type {
         const Self = @This();
 
         pub fn init(size: usize, allocator: std.mem.Allocator) Self {
-            var inds = allocator.alloc(usize, size) catch unreachable;
+            const inds = allocator.alloc(usize, size) catch unreachable;
             var output = allocator.alloc(u8, size) catch unreachable;
             std.mem.set(usize, inds, 0);
             for (output, 0..) |_, ind| {
-                output[ind] = @truncate(u8, ind);
+                output[ind] = @truncate(ind);
             }
             return .{ .size = size, .c = inds, .A = output, .len = factorial(size), .allocator = allocator };
         }

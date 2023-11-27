@@ -82,7 +82,7 @@ const PuzzleContext = struct {
         var dist: [][]u8 = allocator.alloc([]u8, valves.len) catch unreachable;
         for (dist) |*d_slice| {
             d_slice.* = allocator.alloc(u8, valves.len) catch unreachable;
-            @memset(d_slice.*, @truncate(u8, valves.len));
+            @memset(d_slice.*, @truncate(valves.len));
         }
 
         var useful_ind: usize = 0;
@@ -119,7 +119,7 @@ const PuzzleContext = struct {
 
         // We now downselect the distance matrix to be only the useful valves
         // Plus the starting valve for the initial exploration.
-        var dist_u: [][]u8 = allocator.alloc([]u8, useful_valves.items.len + 1) catch unreachable;
+        const dist_u: [][]u8 = allocator.alloc([]u8, useful_valves.items.len + 1) catch unreachable;
 
         for (dist_u, 0..) |*du_slice, uv_ind| {
             du_slice.* = allocator.alloc(u8, useful_valves.items.len + 1) catch unreachable;
@@ -140,8 +140,8 @@ const PuzzleContext = struct {
             allocator.free(d_slice);
         }
         allocator.free(dist);
-        var memos = std.AutoHashMap(MemoKey, usize).init(allocator);
-        return PuzzleContext{ .valves = valves, .distances = dist_u, .allocator = allocator, .uv = uv, .valve_states = VBits.initEmpty(), .current_location = @truncate(u8, uv.len), .memos = memos };
+        const memos = std.AutoHashMap(MemoKey, usize).init(allocator);
+        return PuzzleContext{ .valves = valves, .distances = dist_u, .allocator = allocator, .uv = uv, .valve_states = VBits.initEmpty(), .current_location = @truncate(uv.len), .memos = memos };
     }
 
     fn deinit(self: *PuzzleContext) void {
@@ -175,7 +175,7 @@ const PuzzleContext = struct {
         var i: usize = 0;
         for (self.uv, 0..) |_, ind| {
             if (!self.valve_states.isSet(ind)) {
-                valves[i] = @truncate(u8, ind);
+                valves[i] = @as(u8, @truncate(ind));
                 i += 1;
             }
         }
@@ -214,7 +214,7 @@ fn memoisedExplore(ctx: *PuzzleContext) usize {
     if (ctx.lookup()) |v| {
         return ctx.current_benefit + v;
     }
-    var local_valves = ctx.getRemainingValves();
+    const local_valves = ctx.getRemainingValves();
     defer ctx.allocator.free(local_valves);
 
     const c_time = ctx.ticks_spent;
@@ -228,7 +228,7 @@ fn memoisedExplore(ctx: *PuzzleContext) usize {
         ctx.advanceToValve(next_valve);
 
         const exp = if (local_valves.len > 1) memoisedExplore(ctx) else ctx.current_benefit;
-        local_max = std.math.max(local_max, exp);
+        local_max = @max(local_max, exp);
 
         // Reset back to current state
         ctx.toggleValveState(next_valve);
@@ -245,7 +245,7 @@ const PartitionIter = struct {
     limit: usize,
 
     pub fn init(count: usize) PartitionIter {
-        const limit = SHIFT_1 << @truncate(u6, count - 1);
+        const limit = SHIFT_1 << @as(u6, @truncate(count - 1));
         return PartitionIter{
             .limit = limit,
         };
@@ -256,7 +256,7 @@ const PartitionIter = struct {
         if (self.current_partition > self.limit) {
             return null;
         }
-        return @truncate(u16, self.current_partition);
+        return @as(u16, @truncate(self.current_partition));
     }
 };
 
@@ -264,22 +264,22 @@ pub fn solve(content: str, allocator: Allocator) !Answer {
     var valves_al = ArrayList(Valve).init(allocator);
     var lines = std.mem.tokenize(u8, content, "\n");
     while (lines.next()) |line| {
-        var valve = parseValve(line, allocator);
+        const valve = parseValve(line, allocator);
         valves_al.append(valve) catch unreachable;
     }
 
-    var valves = valves_al.toOwnedSlice() catch unreachable;
+    const valves = valves_al.toOwnedSlice() catch unreachable;
     var ctx = PuzzleContext.init(valves, allocator);
     defer ctx.deinit();
 
-    var part_1 = memoisedExplore(&ctx);
+    const part_1 = memoisedExplore(&ctx);
 
     ctx.max_ticks = 26;
     ctx.memos.clearRetainingCapacity();
     var part_2: usize = 0;
     var partitions = PartitionIter.init(ctx.uv.len);
-    var size_cutoff: usize = @divTrunc(ctx.uv.len, 3);
-    var size_cutoff_upper: usize = ctx.uv.len - size_cutoff;
+    const size_cutoff: usize = @divTrunc(ctx.uv.len, 3);
+    const size_cutoff_upper: usize = ctx.uv.len - size_cutoff;
     while (partitions.next()) |valve_sets| {
         ctx.valve_states.mask = valve_sets;
         // Heuristics for a quick skip? I'm assuming the partitions where
@@ -288,7 +288,7 @@ pub fn solve(content: str, allocator: Allocator) !Answer {
         const route_1 = memoisedExplore(&ctx);
         ctx.toggleAllValveStates();
         const route_2 = memoisedExplore(&ctx);
-        part_2 = std.math.max(part_2, route_1 + route_2);
+        part_2 = @max(part_2, route_1 + route_2);
     }
 
     return Answer{ .part_1 = part_1, .part_2 = part_2 };
@@ -306,7 +306,7 @@ pub fn main() !void {
 }
 
 test "day 16 worked examples" {
-    var answer = try solve(example, std.testing.allocator);
+    const answer = try solve(example, std.testing.allocator);
     std.testing.expect(answer.part_1 == 1651) catch |err| {
         print("{d} is not 1651\n", .{answer.part_1});
         return err;

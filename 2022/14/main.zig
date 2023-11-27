@@ -115,7 +115,7 @@ const Grid = struct {
         var row: usize = 0;
         while (running_index < self.cells.len) : (running_index += self.width) {
             for (self.cells[running_index .. running_index + self.width], 0..) |cell, index| {
-                local_bytes[index] = @enumToInt(cell);
+                local_bytes[index] = @intFromEnum(cell);
             }
             if (highlight_index) |ind| {
                 if (ind > running_index and ind < running_index + self.width) {
@@ -216,10 +216,10 @@ pub fn solve(content: str, allocator: Allocator) !Answer {
         var point_defs = std.mem.split(u8, rock_path_definition, " -> ");
         while (point_defs.next()) |point_def| {
             const point = Point.fromStr(point_def);
-            min_x = std.math.min(min_x, point.x);
-            min_y = std.math.min(min_y, point.y);
-            max_x = std.math.max(max_x, point.x);
-            max_y = std.math.max(max_y, point.y);
+            min_x = @min(min_x, point.x);
+            min_y = @min(min_y, point.y);
+            max_x = @max(max_x, point.x);
+            max_y = @max(max_y, point.y);
             point_list.append(point) catch unreachable;
         }
         lines_list.append(point_list.toOwnedSlice() catch unreachable) catch unreachable;
@@ -245,7 +245,7 @@ pub fn solve(content: str, allocator: Allocator) !Answer {
             }
         }
     }
-    var part_1 = grid.grain_counter;
+    const part_1 = grid.grain_counter;
 
     // Reset the grid for part 2:
     // In this part, the 'inifinite' floor is a little lower than our lowest
@@ -295,7 +295,7 @@ pub fn main() !void {
 }
 
 test "day 14 worked examples" {
-    var answer = try solve(example, std.testing.allocator);
+    const answer = try solve(example, std.testing.allocator);
     std.testing.expect(answer.part_1 == 24) catch |err| {
         print("{d} is not 24\n", .{answer.part_1});
         return err;

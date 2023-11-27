@@ -86,7 +86,7 @@ fn parseMonkey(monkey_def: []const u8, allocator: Allocator) Monkey {
         }
     }
     const test_line = stripPrefix(monkey_lines.next().?);
-    var tester: WorryTester = WorryTester{ .value = getEndNumber(test_line) };
+    const tester: WorryTester = WorryTester{ .value = getEndNumber(test_line) };
     const true_line = stripPrefix(monkey_lines.next().?);
     const true_monkey = getEndNumber(true_line);
     const false_line = stripPrefix(monkey_lines.next().?);
@@ -191,7 +191,7 @@ pub fn main() !void {
 }
 
 test "day 11 worked examples" {
-    var answer = try solve(example, std.testing.allocator);
+    const answer = try solve(example, std.testing.allocator);
     std.testing.expect(answer.part_1 == 10605) catch |err| {
         print("{d} is not 10605\n", .{answer.part_1});
         return err;

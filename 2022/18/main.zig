@@ -120,9 +120,9 @@ pub fn solve(content: str, allocator: Allocator) !Answer {
     var lines = std.mem.tokenize(u8, content, "\n");
     while (lines.next()) |l| {
         const c = Cube.fromStr(l);
-        extents.x = std.math.max(extents.x, c.x);
-        extents.y = std.math.max(extents.y, c.y);
-        extents.z = std.math.max(extents.z, c.z);
+        extents.x = @max(extents.x, c.x);
+        extents.y = @max(extents.y, c.y);
+        extents.z = @max(extents.z, c.z);
         open_cube_set.put(c, {}) catch unreachable;
     }
 
@@ -183,7 +183,7 @@ pub fn main() !void {
 }
 
 test "day 18 worked examples" {
-    var answer = try solve("day18.test", std.testing.allocator);
+    const answer = try solve("day18.test", std.testing.allocator);
     var failed = false;
     std.testing.expect(answer.part_1 == 64) catch {
         print("{d} is not 64\n", .{answer.part_1});

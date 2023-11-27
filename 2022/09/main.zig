@@ -28,9 +28,9 @@ const Position = struct {
     y: isize = 0,
 
     fn steps_away(self: Position, other: Position) usize {
-        const steps_x = std.math.absInt(self.x - other.x) catch unreachable;
-        const steps_y = std.math.absInt(self.y - other.y) catch unreachable;
-        return @intCast(usize, std.math.max(steps_x, steps_y));
+        const steps_x = @abs(self.x - other.x);
+        const steps_y = @abs(self.y - other.y);
+        return @intCast(@max(steps_x, steps_y));
     }
 
     fn step(self: *Position, direction: Direction) void {

@@ -29,7 +29,7 @@ const GasState = struct {
     index: usize = 0,
 
     fn init(content: str) GasState {
-        var s = GasState{ .direction = GasDirection.Left, .content = content, .index = content.len - 1 };
+        const s = GasState{ .direction = GasDirection.Left, .content = content, .index = content.len - 1 };
         return s;
     }
 
@@ -70,7 +70,7 @@ const Rock = struct {
     ) !void {
         _ = options;
         if (std.mem.eql(u8, "space", fmt)) {
-            try writer.print("    {d}|", .{@enumToInt(self.t)});
+            try writer.print("    {d}|", .{@intFromEnum(self.t)});
             var i: usize = 0;
             while (i <= MAX_CAVERN_IND) : (i += 1) {
                 if (i >= self.left and i <= self.right)
@@ -94,7 +94,7 @@ const RockSpawner = struct {
         const t = self.order[self.index];
         self.index += 1;
         if (self.index == 5) self.index = 0;
-        var bottom: usize = bottom_offset;
+        const bottom: usize = bottom_offset;
         var right: usize = APPEARANCE_OFFSET_LEFT;
         switch (t) {
             .Wide => {
@@ -322,7 +322,7 @@ const Cavern = struct {
         var rock_count: usize = 0;
         var tick_count: usize = 0;
 
-        var lcm_period = 5 * gas.content.len;
+        const lcm_period = 5 * gas.content.len;
         var last_period_height: usize = 0;
         var last_period_height_delta: usize = 0;
         var last_period_rocks: usize = 0;
@@ -366,7 +366,7 @@ const Cavern = struct {
 };
 
 pub fn solve(content: str, allocator: Allocator) !Answer {
-    var trimmed = std.mem.trimRight(u8, content, &std.ascii.whitespace);
+    const trimmed = std.mem.trimRight(u8, content, &std.ascii.whitespace);
 
     var cavern = Cavern.init(allocator);
     defer cavern.deinit();
@@ -376,11 +376,11 @@ pub fn solve(content: str, allocator: Allocator) !Answer {
 
     var root_progress = std.Progress{};
     var p1_node = root_progress.start("Part 1 rocks", ROCK_LIMIT);
-    var part_1 = cavern.simulateSmart(ROCK_LIMIT, trimmed, p1_node);
+    const part_1 = cavern.simulateSmart(ROCK_LIMIT, trimmed, p1_node);
     p1_node.end();
 
     var p2_node = root_progress.start("Part 2 rocks", ROCK_LIMIT_2);
-    var part_2: usize = cavern_2.simulateSmart(ROCK_LIMIT_2, trimmed, p2_node);
+    const part_2: usize = cavern_2.simulateSmart(ROCK_LIMIT_2, trimmed, p2_node);
     p2_node.end();
 
     return Answer{ .part_1 = part_1, .part_2 = part_2 };
@@ -398,7 +398,7 @@ pub fn main() !void {
 }
 
 test "day 17 worked examples" {
-    var answer = try solve(example, std.testing.allocator);
+    const answer = try solve(example, std.testing.allocator);
     var failed = false;
     std.testing.expect(answer.part_1 == 3068) catch {
         print("{d} is not 3068\n", .{answer.part_1});

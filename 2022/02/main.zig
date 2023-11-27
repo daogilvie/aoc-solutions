@@ -12,13 +12,13 @@ const OpposingMove = enum(u8) {
     C = 3,
 
     pub fn getElementThatBeatsThis(self: OpposingMove) OpposingMove {
-        const ordinal = std.math.rem(u8, @enumToInt(self), 3) catch unreachable;
-        return @intToEnum(OpposingMove, ordinal + 1);
+        const ordinal = std.math.rem(u8, @intFromEnum(self), 3) catch unreachable;
+        return @enumFromInt(ordinal + 1);
     }
 
     pub fn getElementThatLosesToThis(self: OpposingMove) OpposingMove {
-        const ordinal = std.math.rem(u8, @enumToInt(self) + 1, 3) catch unreachable;
-        return @intToEnum(OpposingMove, ordinal + 1);
+        const ordinal = std.math.rem(u8, @intFromEnum(self) + 1, 3) catch unreachable;
+        return @enumFromInt(ordinal + 1);
     }
 };
 
@@ -29,8 +29,8 @@ const drawing_score: u8 = 3;
 const losing_score: u8 = 0;
 
 fn calculateScoreOne(opponent_move: OpposingMove, suggestion: GuideSuggestion) usize {
-    const their_ord = @enumToInt(opponent_move);
-    const my_ord = @enumToInt(suggestion);
+    const their_ord = @intFromEnum(opponent_move);
+    const my_ord = @intFromEnum(suggestion);
     const from_draw: u8 = if (their_ord == my_ord) drawing_score else 0;
     const from_win: u8 = switch (suggestion) {
         GuideSuggestion.X => if (opponent_move == OpposingMove.C) winning_score else 0,
@@ -42,9 +42,9 @@ fn calculateScoreOne(opponent_move: OpposingMove, suggestion: GuideSuggestion) u
 
 fn calculateScoreTwo(opponent_move: OpposingMove, suggestion: GuideSuggestion) usize {
     return switch (suggestion) {
-        GuideSuggestion.X => losing_score + @enumToInt(opponent_move.getElementThatLosesToThis()),
-        GuideSuggestion.Y => drawing_score + @enumToInt(opponent_move),
-        GuideSuggestion.Z => winning_score + @enumToInt(opponent_move.getElementThatBeatsThis()),
+        GuideSuggestion.X => losing_score + @intFromEnum(opponent_move.getElementThatLosesToThis()),
+        GuideSuggestion.Y => drawing_score + @intFromEnum(opponent_move),
+        GuideSuggestion.Z => winning_score + @intFromEnum(opponent_move.getElementThatBeatsThis()),
     };
 }
 

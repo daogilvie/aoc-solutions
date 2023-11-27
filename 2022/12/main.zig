@@ -23,12 +23,12 @@ const Point = struct {
     marker: u8,
 
     fn canStepFrom(self: Point, other: Point) bool {
-        var my_marker = switch (self.marker) {
+        const my_marker = switch (self.marker) {
             'S' => 'a',
             'E' => 'z',
             else => self.marker,
         };
-        var their_marker = switch (other.marker) {
+        const their_marker = switch (other.marker) {
             'S' => 'a',
             'E' => 'z',
             else => other.marker,
@@ -52,8 +52,8 @@ const Map = struct {
     }
 
     pub fn getAtCoords(self: Map, row: isize, col: isize) Point {
-        const a_row = @intCast(usize, std.math.absInt(row) catch unreachable);
-        const a_col = @intCast(usize, std.math.absInt(col) catch unreachable);
+        const a_row = @as(usize, @intCast(@abs(row)));
+        const a_col = @as(usize, @intCast(@abs(col)));
         const index = a_row * self.width + a_col;
         return self.points[index];
     }
@@ -76,8 +76,8 @@ const Map = struct {
 };
 
 fn compareFScore(context: *AutoHashMap(Point, usize), a: Point, b: Point) std.math.Order {
-    var a_f = if (context.*.get(a)) |score| score else MAXI;
-    var b_f = if (context.*.get(b)) |score| score else MAXI;
+    const a_f = if (context.*.get(a)) |score| score else MAXI;
+    const b_f = if (context.*.get(b)) |score| score else MAXI;
     return std.math.order(a_f, b_f);
 }
 
@@ -100,7 +100,7 @@ const AStarOpenSet = struct {
         self.len += 1;
     }
     fn pop(self: *AStarOpenSet) Point {
-        var p = self.q.remove();
+        const p = self.q.remove();
         _ = self.q_map.remove(p);
         self.len -= 1;
         return p;
@@ -153,12 +153,12 @@ fn doAStarIsh(map: Map, target_marker: u8) !usize {
             if (possible_neighbour == null) continue;
             const neighbour = possible_neighbour.?;
 
-            var tentative_new_cost_to_reach_neighbour = confirmed_node_journey_costs.get(current_point).? + 1;
+            const tentative_new_cost_to_reach_neighbour = confirmed_node_journey_costs.get(current_point).? + 1;
 
             // Prune impassable nodes right away
             if (!current_point.canStepFrom(neighbour)) continue;
 
-            var existing_cost_to_reach_neighbour = confirmed_node_journey_costs.get(neighbour);
+            const existing_cost_to_reach_neighbour = confirmed_node_journey_costs.get(neighbour);
             if (existing_cost_to_reach_neighbour == null or existing_cost_to_reach_neighbour.? > tentative_new_cost_to_reach_neighbour) {
                 try cheapest_path_lookback.put(neighbour, current_point);
                 try confirmed_node_journey_costs.put(neighbour, tentative_new_cost_to_reach_neighbour);
@@ -220,7 +220,7 @@ pub fn main() !void {
 }
 
 test "day 12 worked examples" {
-    var answer = try solve(example, std.testing.allocator);
+    const answer = try solve(example, std.testing.allocator);
     std.testing.expect(answer.part_1 == 31) catch |err| {
         print("{d} is not 31\n", .{answer.part_1});
         return err;
@@ -234,7 +234,7 @@ test "day 12 worked examples" {
 test "day 12 puzzle results" {
     // I wanted to tidy up my code and not break the puzzle
     // results so I put the right answers in a test
-    var answer = try solve(input, std.testing.allocator);
+    const answer = try solve(input, std.testing.allocator);
     std.testing.expect(answer.part_1 == 440) catch |err| {
         print("{d} is not 440\n", .{answer.part_1});
         return err;

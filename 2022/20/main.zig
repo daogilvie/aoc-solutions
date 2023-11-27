@@ -59,7 +59,8 @@ fn fillList(content: str, list: *ArrayList(ListEntry), value_multiplier: isize, 
     list.items[i - 1].next = &list.items[0];
     // Perform the modulo
     if (value_multiplier != 1 and apply_modulo) {
-        const denominator = @intCast(isize, i) - 1;
+        var denominator: isize = @intCast(i);
+        denominator -= 1;
         for (list.items) |*entry| {
             entry.shift_value = @mod(entry.shift_value, denominator);
         }
@@ -187,7 +188,7 @@ pub fn solve(content: str, allocator: Allocator) !Answer {
         sorted_from_zero.append(sorted_from_zero.items[sorted_index - 1].next.?.*) catch unreachable;
     }
 
-    var part_2: isize = sorted_from_zero.items[first_ind].value + sorted_from_zero.items[second_ind].value + sorted_from_zero.items[third_ind].value;
+    const part_2: isize = sorted_from_zero.items[first_ind].value + sorted_from_zero.items[second_ind].value + sorted_from_zero.items[third_ind].value;
 
     return Answer{ .part_1 = part_1, .part_2 = part_2 };
 }
@@ -204,7 +205,7 @@ pub fn main() !void {
 }
 
 test "day 20 worked examples" {
-    var answer = try solve(example, std.testing.allocator);
+    const answer = try solve(example, std.testing.allocator);
     var failed = false;
     std.testing.expect(answer.part_1 == 3) catch {
         print("{d} is not 3\n", .{answer.part_1});

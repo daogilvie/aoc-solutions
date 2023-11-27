@@ -17,7 +17,7 @@ fn toInd(char: u8) usize {
 }
 
 fn fromInd(ind: usize) u8 {
-    return @truncate(u8, ind + 97);
+    return @truncate(ind + 97);
 }
 
 const PART_1_WINDOW_LENGTH: usize = 4;
@@ -43,7 +43,7 @@ fn slideWindowToFindMarker(haystack: []const u8, window_size: usize) usize {
     return while (window_start < haystack.len - window_size) {
         const window = haystack[window_start .. window_start + window_size];
 
-        var diff: usize = checkWindowIsAllDifferent(window);
+        const diff: usize = checkWindowIsAllDifferent(window);
         if (diff > 0) {
             window_start += diff;
         } else break window_start + window_size;
@@ -61,7 +61,7 @@ pub fn main() !void {
 }
 
 test "day 6 worked example" {
-    var answer = try solve(example);
+    const answer = try solve(example);
     std.testing.expect(answer.part_1 == 7) catch |err| {
         print("{d} is not 7\n", .{answer.part_1});
         return err;

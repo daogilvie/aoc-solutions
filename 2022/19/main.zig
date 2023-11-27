@@ -54,9 +54,9 @@ const Blueprint = struct {
                     .obsidian => total_cost.obsidian = amount,
                 }
             }
-            maxes.ore = std.math.max(total_cost.ore, maxes.ore);
-            maxes.clay = std.math.max(total_cost.clay, maxes.clay);
-            maxes.obsidian = std.math.max(total_cost.obsidian, maxes.obsidian);
+            maxes.ore = @max(total_cost.ore, maxes.ore);
+            maxes.clay = @max(total_cost.clay, maxes.clay);
+            maxes.obsidian = @max(total_cost.obsidian, maxes.obsidian);
             piles[bot_index] = total_cost;
             bot_index += 1;
         }
@@ -173,7 +173,7 @@ const State = struct {
 /// to work with this ordering.
 fn computePrioritisationHeuristic(_: void, a: State, b: State) std.math.Order {
     // The structs are aligned such that we can just compare them as ints
-    return std.math.order(@bitCast(u64, b.things), @bitCast(u64, a.things));
+    return std.math.order(@as(u64, @bitCast(b.things)), @as(u64, @bitCast(a.things)));
 }
 
 const AStarOpenSet = struct {
@@ -195,7 +195,7 @@ const AStarOpenSet = struct {
         self.len += 1;
     }
     fn pop(self: *AStarOpenSet) State {
-        var p = self.q.remove();
+        const p = self.q.remove();
         _ = self.q_map.remove(p);
         self.len -= 1;
         return p;
@@ -221,28 +221,28 @@ const NeighbourIterator = struct {
                     .ore => {
                         self.last_tried_neighbour = BotChoice.clay;
                         if (current_state.things.clay_bots < blueprint.max_costs.clay and current_state.things.hasEnough(blueprint.clay_bot)) {
-                            var clay_bot_made_state = current_state.tickClone(BotChoice.clay);
+                            const clay_bot_made_state = current_state.tickClone(BotChoice.clay);
                             break :botloop clay_bot_made_state;
                         }
                     },
                     .clay => {
                         self.last_tried_neighbour = BotChoice.obsidian;
                         if (current_state.things.obsidian_bots < blueprint.max_costs.obsidian and current_state.things.hasEnough(blueprint.obsidian_bot)) {
-                            var obs_bot_made_state = current_state.tickClone(BotChoice.obsidian);
+                            const obs_bot_made_state = current_state.tickClone(BotChoice.obsidian);
                             break :botloop obs_bot_made_state;
                         }
                     },
                     .obsidian => {
                         self.last_tried_neighbour = BotChoice.geode;
                         if (current_state.things.hasEnough(blueprint.geode_bot)) {
-                            var geode_bot_made_state = current_state.tickClone(BotChoice.geode);
+                            const geode_bot_made_state = current_state.tickClone(BotChoice.geode);
                             break :botloop geode_bot_made_state;
                         }
                     },
                     .geode => {
                         // We can always do nothing
                         self.last_tried_neighbour = BotChoice.doNothing;
-                        var idle_tick = current_state.tickClone(BotChoice.doNothing);
+                        const idle_tick = current_state.tickClone(BotChoice.doNothing);
                         break :botloop idle_tick;
                     },
                     .doNothing => {
@@ -254,11 +254,11 @@ const NeighbourIterator = struct {
             else {
                 self.last_tried_neighbour = BotChoice.ore;
                 if (current_state.things.ore_bots < blueprint.max_costs.ore and current_state.things.hasEnough(blueprint.ore_bot)) {
-                    var ore_bot_made_state = current_state.tickClone(BotChoice.ore);
+                    const ore_bot_made_state = current_state.tickClone(BotChoice.ore);
                     break :botloop ore_bot_made_state;
                 }
             }
-        };
+        } else null;
         return next_neighbour;
     }
 };
@@ -318,7 +318,7 @@ fn exploreStateSpace(context: Context, allocator: Allocator, prog_node: *std.Pro
             // We aren't actually all that interested in shortest-path calculations here,
             // just to get the maximum value of geodes. If we've seen a state already,
             // don't bother with it again, as it can't give us any new info.
-            var existing_cost_to_reach_neighbour = confirmed_geode_amounts.get(neighbour);
+            const existing_cost_to_reach_neighbour = confirmed_geode_amounts.get(neighbour);
             if (existing_cost_to_reach_neighbour == null and !open_set.contains(neighbour)) {
                 open_set.enqueue(neighbour);
             }
@@ -374,7 +374,7 @@ pub fn main() !void {
 }
 
 test "day 19 worked examples" {
-    var answer = try solve(example, std.testing.allocator);
+    const answer = try solve(example, std.testing.allocator);
     var failed = false;
     std.testing.expect(answer.part_1 == 33) catch {
         print("{d} is not 33\n", .{answer.part_1});

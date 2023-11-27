@@ -52,7 +52,7 @@ fn itemiseRucksackAndFindDuplicate(rucksack_contents: []const u8, elf_trio_item_
     // so ¯\_(ツ)_/¯
     var internal_map = ItemMap.init();
 
-    var halfway_point = rucksack_contents.len / 2;
+    const halfway_point = rucksack_contents.len / 2;
 
     for (rucksack_contents, 0..) |item, index| {
         const in_compartment_2 = index >= halfway_point;

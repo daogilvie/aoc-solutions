@@ -157,7 +157,7 @@ pub fn solve(content: []const u8, allocator: Allocator) !Answer {
         const row: usize = @divFloor(index, grove.width);
         const col: usize = @rem(index, grove.width);
         if (row == 0 or col == 0 or row == grove.height - 1 or col == grove.width - 1) continue;
-        part_2 = std.math.max(heightlines.scenicScore(), part_2);
+        part_2 = @max(heightlines.scenicScore(), part_2);
     }
 
     return Answer{ .part_1 = part_1, .part_2 = part_2 };
@@ -175,7 +175,7 @@ pub fn main() !void {
 }
 
 test "day 8 worked example" {
-    var answer = try solve(example, std.testing.allocator);
+    const answer = try solve(example, std.testing.allocator);
     std.testing.expect(answer.part_1 == 21) catch |err| {
         print("{d} is not 21\n", .{answer.part_1});
         return err;

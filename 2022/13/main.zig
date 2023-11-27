@@ -155,10 +155,10 @@ pub fn solve(content: str, allocator: Allocator) !Answer {
     var packets = ArrayList(ListEntry).init(allocator);
 
     while (lines.next()) |line| {
-        var left = parseStrComplete(line, allocator);
+        const left = parseStrComplete(line, allocator);
         packets.append(left) catch unreachable;
         const right_line = lines.next().?;
-        var right = parseStrComplete(right_line, allocator);
+        const right = parseStrComplete(right_line, allocator);
         packets.append(right) catch unreachable;
 
         // Are these correct?
@@ -172,7 +172,7 @@ pub fn solve(content: str, allocator: Allocator) !Answer {
     // Inject divider packet
     packets.append(parseStrComplete("[[2]]", allocator)) catch unreachable;
     packets.append(parseStrComplete("[[6]]", allocator)) catch unreachable;
-    var sortable = packets.toOwnedSlice() catch unreachable;
+    const sortable = packets.toOwnedSlice() catch unreachable;
     defer deinitPackets(sortable, allocator);
     std.mem.sort(ListEntry, sortable, allocator, orderPackets);
     var part_2: usize = 1;
@@ -208,7 +208,7 @@ pub fn main() !void {
 }
 
 test "day 13 worked examples" {
-    var answer = try solve(example, std.testing.allocator);
+    const answer = try solve(example, std.testing.allocator);
     std.testing.expect(answer.part_1 == 13) catch |err| {
         print("{d} is not 13\n", .{answer.part_1});
         return err;

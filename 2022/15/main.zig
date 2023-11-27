@@ -15,7 +15,7 @@ const Offset = struct {
     y: isize,
 
     fn manhattanDistance(self: Offset) isize {
-        return (std.math.absInt(self.x) catch unreachable) + (std.math.absInt(self.y) catch unreachable);
+        return @intCast(@abs(self.x) + @abs(self.y));
     }
 };
 
@@ -25,7 +25,7 @@ const Segment = struct {
     len: usize,
 
     fn init(min: isize, max: isize) Segment {
-        return Segment{ .min = min, .max = max, .len = std.math.absCast(max - min) + 1 };
+        return Segment{ .min = min, .max = max, .len = @abs(max - min) + 1 };
     }
 
     fn contains(self: Segment, num: isize) bool {
@@ -38,7 +38,7 @@ const Segment = struct {
 
     fn combineWith(self: Segment, other: Segment) ?Segment {
         if (!self.overlaps(other)) return null;
-        return Segment.init(std.math.min(self.min, other.min), std.math.max(self.max, other.max));
+        return Segment.init(@min(self.min, other.min), @max(self.max, other.max));
     }
 };
 
@@ -85,7 +85,7 @@ const Point = struct {
 };
 
 fn incremementPointCounter(point: Point, counter: *std.AutoArrayHashMap(Point, usize)) void {
-    var entry = counter.getOrPut(point) catch unreachable;
+    const entry = counter.getOrPut(point) catch unreachable;
     if (!entry.found_existing) {
         entry.value_ptr.* = 1;
     } else {
@@ -93,12 +93,12 @@ fn incremementPointCounter(point: Point, counter: *std.AutoArrayHashMap(Point, u
     }
 }
 
-fn generateSegmentsForLine(target_y: isize, sensors: ArrayList(Point), beacons: ArrayList(Point), allocator: Allocator) ArrayList(Segment) {
+fn generateSegmentsForLine(target_y: i32, sensors: ArrayList(Point), beacons: ArrayList(Point), allocator: Allocator) ArrayList(Segment) {
     var segments = ArrayList(Segment).init(allocator);
     for (sensors.items, 0..) |sensor, index| {
         const beacon = beacons.items[index];
         const beacon_distance = sensor.getOffset(beacon).manhattanDistance();
-        const target_distance = std.math.absInt(target_y - sensor.y) catch unreachable;
+        const target_distance: isize = @intCast(@abs(target_y - sensor.y));
 
         const wiggle_room = beacon_distance - target_distance;
         if (wiggle_room >= 0) {
@@ -129,7 +129,7 @@ fn generateSegmentsForLine(target_y: isize, sensors: ArrayList(Point), beacons: 
     return segments;
 }
 
-pub fn solve(content: str, allocator: Allocator, target_y: isize, search_bound: isize) !Answer {
+pub fn solve(content: str, allocator: Allocator, target_y: i32, search_bound: isize) !Answer {
     var lines = std.mem.tokenize(u8, content, "\n");
 
     var sensors = ArrayList(Point).init(allocator);
@@ -160,10 +160,10 @@ pub fn solve(content: str, allocator: Allocator, target_y: isize, search_bound: 
         sensor_distances.append(sensor.getOffset(beacon).manhattanDistance()) catch unreachable;
         if (!beacon_set.contains(beacon)) unique_beacons.append(beacon) catch unreachable;
         beacon_set.put(beacon, {}) catch unreachable;
-        min_x = std.math.min(std.math.min(sensor.x, beacon.x), min_x);
-        max_x = std.math.max(std.math.max(sensor.x, beacon.x), max_x);
-        min_y = std.math.min(std.math.min(sensor.y, beacon.y), min_y);
-        max_y = std.math.max(std.math.max(sensor.y, beacon.y), max_y);
+        min_x = @min(@min(sensor.x, beacon.x), min_x);
+        max_x = @max(@max(sensor.x, beacon.x), max_x);
+        min_y = @min(@min(sensor.y, beacon.y), min_y);
+        max_y = @max(@max(sensor.y, beacon.y), max_y);
     }
 
     // Part 1 single line
@@ -254,7 +254,7 @@ pub fn solve(content: str, allocator: Allocator, target_y: isize, search_bound: 
             if (p.getOffset(sensor).manhattanDistance() <= threshold) break :inner;
         } else {
             // THIS IS THE POINT!
-            break :exp std.math.absCast(p.x) * 4000000 + std.math.absCast(p.y);
+            break :exp @abs(p.x) * 4000000 + @abs(p.y);
         }
     } else 0;
 
@@ -273,7 +273,7 @@ pub fn main() !void {
 }
 
 test "day 15 worked examples" {
-    var answer = try solve(example, std.testing.allocator, 10, 20);
+    const answer = try solve(example, std.testing.allocator, 10, 20);
     std.testing.expect(answer.part_1 == 26) catch |err| {
         print("{d} is not 26\n", .{answer.part_1});
         return err;

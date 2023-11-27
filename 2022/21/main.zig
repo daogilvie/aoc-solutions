@@ -98,7 +98,7 @@ fn normaliseMonkeyTree(bag_of_monkeys: *std.StringHashMap(MathMonkey), monkey_na
 }
 
 fn calculateTarget(operation: Operation, target: isize, lhs: ?usize, rhs: ?usize) isize {
-    const known_number = @intCast(isize, if (lhs == null) rhs.? else lhs.?);
+    const known_number: isize = @intCast(if (lhs == null) rhs.? else lhs.?);
     return switch (operation) {
         Operation.plus => target - known_number,
         Operation.minus => if (lhs == null) target + known_number else known_number - target,
@@ -179,14 +179,14 @@ pub fn solve(content: str, allocator: Allocator) !Answer {
             const right = monkeymap.get(calc_monkey.rhs).?.get_number();
             // One of the monkeys is a number, the other needs exploring
             if (left == null) {
-                break :blk try determineHumanNumber(&monkeymap, calc_monkey.lhs, @intCast(isize, right.?));
+                break :blk try determineHumanNumber(&monkeymap, calc_monkey.lhs, @as(isize, @intCast(right.?)));
             } else {
-                break :blk try determineHumanNumber(&monkeymap, calc_monkey.rhs, @intCast(isize, left.?));
+                break :blk try determineHumanNumber(&monkeymap, calc_monkey.rhs, @as(isize, @intCast(left.?)));
             }
         },
     };
 
-    return Answer{ .part_1 = part_1, .part_2 = @intCast(usize, part_2) };
+    return Answer{ .part_1 = part_1, .part_2 = @as(usize, @intCast(part_2)) };
 }
 
 pub fn main() !void {
@@ -201,7 +201,7 @@ pub fn main() !void {
 }
 
 test "day 21 worked examples" {
-    var answer = try solve(example, std.testing.allocator);
+    const answer = try solve(example, std.testing.allocator);
     var failed = false;
     std.testing.expect(answer.part_1 == 152) catch {
         print("{d} is not 152\n", .{answer.part_1});

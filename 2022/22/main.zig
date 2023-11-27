@@ -164,8 +164,42 @@ const Map = struct {
     }
 
     pub fn step_wrapped(self: *Map) bool {
-        var row = self.current_row;
-        var col = self.current_col;
+        const row = self.current_row;
+        const col = self.current_col;
+        // Mark it
+        self.set_current_cell_contents(self.current_facing.repr());
+        self.step();
+        var current = self.current_cell_contents();
+        // Check if we need to sliiiiide along the void
+        if (current == ' ') {
+            while (current == ' ') {
+                self.step();
+                current = self.current_cell_contents();
+            }
+        }
+
+        // Have we hit a wall? Reset.
+        if (current == '#') {
+            // Cannot move, so just reset and return
+            self.current_row = row;
+            self.current_col = col;
+            return false;
+        }
+        self.set_current_cell_contents('@');
+        return true;
+    }
+
+    pub fn step_cubenet(self: *Map) bool {
+        const row = self.current_row;
+        const col = self.current_col;
+        const right_edge = @mod(col, self.region_size - 1) == 0;
+        _ = right_edge;
+        const down_edge = @mod(row, self.region_size - 1) == 0;
+        _ = down_edge;
+        const left_edge = @mod(col, self.region_size) == 0;
+        _ = left_edge;
+        const up_edge = @mod(row, self.region_size) == 0;
+        _ = up_edge;
         // Mark it
         self.set_current_cell_contents(self.current_facing.repr());
         self.step();
@@ -278,8 +312,11 @@ pub fn solve(content: str, allocator: Allocator) !Answer {
 
     const part_1: usize = map.current_facing.value() + 1000 * (map.current_row + 1) + 4 * (map.current_col + 1);
 
-    const part_2: usize = 0;
-    return Answer{ .part_1 = part_1, .part_2 = @intCast(usize, part_2) };
+    // Re-parse the map to reset
+    map = parseMap(map_spec, allocator);
+
+    const part_2: usize = map.current_facing.value() + 1000 * (map.current_row + 1) + 4 * (map.current_col + 1);
+    return Answer{ .part_1 = part_1, .part_2 = part_2 };
 }
 
 pub fn main() !void {
@@ -294,15 +331,15 @@ pub fn main() !void {
 }
 
 test "day 22 worked examples" {
-    var answer = try solve(example, std.testing.allocator);
+    const answer = try solve(example, std.testing.allocator);
     var failed = false;
     std.testing.expect(answer.part_1 == 6032) catch {
         print("{d} is not 6032\n", .{answer.part_1});
         failed = true;
     };
-    // std.testing.expect(answer.part_2 == 301) catch {
-    //     print("{d} is not 301\n", .{answer.part_2});
-    //     failed = true;
-    // };
+    std.testing.expect(answer.part_2 == 5031) catch {
+        print("{d} is not 5031\n", .{answer.part_2});
+        failed = true;
+    };
     try std.testing.expect(!failed);
 }

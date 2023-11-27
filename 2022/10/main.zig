@@ -28,7 +28,7 @@ const CRT_BUF_LEN = 40 * 6;
 const Operation = enum { noop, addx };
 
 pub fn closeEnough(target: isize, value: isize) bool {
-    return std.math.absInt(target - value) catch unreachable < 2;
+    return @abs(target - value) < 2;
 }
 
 pub fn solve(content: []const u8, allocator: Allocator) !Answer {
@@ -42,7 +42,7 @@ pub fn solve(content: []const u8, allocator: Allocator) !Answer {
     var crt_pixels: [CRT_BUF_LEN]u8 = .{'.'} ** CRT_BUF_LEN;
     @memset(&crt_pixels, '`');
     while (true) : (cycle_count += 1) {
-        const cycle_signed = @intCast(isize, cycle_count);
+        const cycle_signed: isize = @intCast(cycle_count);
         if (@mod(cycle_count, 40) == 20) {
             signal_sum += cycle_signed * x_register;
         }

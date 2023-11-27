@@ -20,13 +20,13 @@ fn solve(contents: []const u8, allocator: Allocator) !Answer {
         var total_calories: usize = 0;
         while (elf_items.next()) |calorie_bytes| {
             if (calorie_bytes.len == 0) continue; // Skip empty line at the end of the file
-            var calorie_count = try std.fmt.parseInt(usize, calorie_bytes, 10);
+            const calorie_count = try std.fmt.parseInt(usize, calorie_bytes, 10);
             total_calories += calorie_count;
         }
         try calorie_list.append(total_calories);
     }
 
-    var sorted = try calorie_list.toOwnedSlice();
+    const sorted = try calorie_list.toOwnedSlice();
     defer allocator.free(sorted);
 
     std.mem.sort(usize, sorted, {}, descending);
