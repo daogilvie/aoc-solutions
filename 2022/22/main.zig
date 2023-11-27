@@ -306,14 +306,15 @@ pub fn solve(content: str, allocator: Allocator) !Answer {
     defer instructions.deinit();
 
     var map = parseMap(map_spec, allocator);
-    defer map.deinit();
 
     followInstructions(instructions, &map);
 
     const part_1: usize = map.current_facing.value() + 1000 * (map.current_row + 1) + 4 * (map.current_col + 1);
 
     // Re-parse the map to reset
+    map.deinit();
     map = parseMap(map_spec, allocator);
+    defer map.deinit();
 
     const part_2: usize = map.current_facing.value() + 1000 * (map.current_row + 1) + 4 * (map.current_col + 1);
     return Answer{ .part_1 = part_1, .part_2 = part_2 };
