@@ -183,7 +183,7 @@ pub fn main() !void {
 }
 
 test "day 18 worked examples" {
-    const answer = try solve("day18.test", std.testing.allocator);
+    const answer = try solve(example, std.testing.allocator);
     var failed = false;
     std.testing.expect(answer.part_1 == 64) catch {
         print("{d} is not 64\n", .{answer.part_1});
