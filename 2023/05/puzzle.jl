@@ -200,33 +200,34 @@ function galaxy_brain_solve(filename)
     contents = open(filename, "r")
     seeds::AbstractArray{Int} = map(x -> parse(Int, x), split(chopprefix(readline(contents), "seeds: ")))
 
-    defs = []
+    lerp_sets = []
     while true
         map_def = lstrip(readuntil(contents, "\n\n"))
         if length(map_def) == 0
             break
         end
-        push!(defs, map_def)
+        parts = split(map_def, "\n", keepempty=false)
+        next_lerps = map(Lerps.make_lerp, parts[2:end])
+        push!(lerp_sets, next_lerps)
     end
 
     current_minimum = 2^62
-    iteration_count = 1
     for (seed_domain_start, seed_domain_size) in Iterators.partition(seeds, 2)
         seed_lerp = Lerps.LerpDef(seed_domain_start, seed_domain_start + seed_domain_size - 1, seed_domain_start, seed_domain_start + seed_domain_size - 1, seed_domain_size)
         current_lerps = [seed_lerp]
-        for map_def in defs
+        for next_lerps in lerp_sets
             new_current_lerps = []
-            parts = split(map_def, "\n", keepempty=false)
-
-            next_lerps = map(Lerps.make_lerp, parts[2:end])
             for input_lerp in current_lerps
-                append!(new_current_lerps, Lerps.extrude(input_lerp, next_lerps, iteration_count))
+                append!(new_current_lerps, Lerps.extrude(input_lerp, next_lerps))
             end
             current_lerps = new_current_lerps
         end
+        # PRO-TIP: If you assume an array is sorted, you should make sure it is
+        # sorted because otherwise your life partner questions whether you should
+        # maybe get hobbies that don't involve crying tears of frustration into
+        # a keyboard
         sort!(current_lerps, by=x -> x.range_start)
         current_minimum = min(current_minimum, current_lerps[1].range_start)
-        iteration_count += 1
     end
 
     return current_minimum
