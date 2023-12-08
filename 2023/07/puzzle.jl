@@ -1,100 +1,97 @@
-function card_index(c::AbstractChar)::Int8
-    # Default is 'A'
-    ind = 13
-    if c == 'K'
-        ind = 12
-    elseif c == 'Q'
-        ind = 11
-    elseif c == 'J'
-        ind = 10
-    elseif c == 'T'
-        ind = 9
-    elseif c == '9'
-        ind = 8
-    elseif c == '8'
-        ind = 7
-    elseif c == '7'
-        ind = 6
-    elseif c == '6'
-        ind = 5
-    elseif c == '5'
-        ind = 4
-    elseif c == '4'
-        ind = 3
-    elseif c == '3'
-        ind = 2
-    elseif c == '2'
-        ind = 1
-    end
-    return ind
-end
+card_values = "23456789TJQKA"
+card_values_joker_mode = "J23456789TQKA"
 
-function hand_type_score(hand::AbstractString)::Int8
+function hand_type_score(hand::AbstractString, joker_mode::Bool=false)::Int8
     hnd_array::Array{Int8,1} = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    values_string = joker_mode ? card_values_joker_mode : card_values
     for c in hand
-        hnd_array[card_index(c)] += 1
+        hnd_array[findfirst(c, values_string)] += 1
     end
 
     counts = sort(filter(x -> !iszero(x), hnd_array))
+    sort!(counts, rev=true)
     distinct = length(counts)
-    most = max(counts...)
+    most = counts[1]
+
+    @assert(length(counts) >= 1 && length(counts) <= 5)
+    @assert(sum(hnd_array) == sum(counts))
+    @assert(sum(counts) == 5)
+
+    joker_count = hnd_array[1]
+    if joker_mode && joker_count > 0
+        # We always transform jokers to be another kind of card
+        distinct -= 1
+        # Jokers just always become more of whatever the most common card is
+        # if they aren't themselves the most common card.
+        if joker_count < most
+            most += joker_count
+        elseif joker_count < 5
+            # there are more jokers than other cards, but it's not all jokers
+            # they just add to whatever the next most common is
+            most = joker_count + counts[2]
+        end
+    end
+
+    # "high card"
+    score = 1
 
     if most == 5
         # 5 of a kind
-        return 7
+        score = 7
     elseif most == 4
         # 4 of a kind
-        return 6
+        score = 6
     elseif most == 3
         if distinct == 2
             # Full house
-            return 5
+            score = 5
         else
             # Three of a kind
-            return 4
+            score = 4
         end
     elseif most == 2
         if distinct == 3
             # Two pair
-            return 3
+            score = 3
         else
             #One pair
-            return 2
+            score = 2
         end
-    else
-        # "high card"
-        return 1
     end
-    @assert(false, "Shouldn't get here")
+
+    # Return score and number of jokers
+    return score
 end
 
 
-function compare_hand_entries(left, right)
-    if left[2] != right[2]
-        return left[2] < right[2]
-    else
-        for (c_1, c_2) in zip(left[1], right[1])
-            if c_1 == c_2
-                continue
-            else
-                return card_index(c_1) < card_index(c_2)
+function make_comparator(joker_mode)
+    values_string = joker_mode ? card_values_joker_mode : card_values
+    return function compare_hand_entries(left, right)
+        if left[2] != right[2]
+            return left[2] < right[2]
+        else
+            for (c_1, c_2) in zip(left[1], right[1])
+                if c_1 == c_2
+                    continue
+                else
+                    return findfirst(c_1, values_string) < findfirst(c_2, values_string)
+                end
             end
         end
     end
-
 end
 
-function preprocess(hand_and_bid)
+function preprocess(hand_and_bid, joker_mode::Bool=false)
     (hand, bid) = split(hand_and_bid)
     bid_n = parse(Int, bid)
-    type_score = hand_type_score(hand)
+    type_score = hand_type_score(hand, joker_mode)
     return (hand, type_score, bid_n)
 end
 
-function solve_p1(filename)
+function solve(filename, joker_mode)
 
-    hand_entries = map(preprocess, eachline(filename))
-    sort!(hand_entries, lt=compare_hand_entries)
+    hand_entries = map(x -> preprocess(x, joker_mode), eachline(filename))
+    sort!(hand_entries, lt=make_comparator(joker_mode))
 
     winnings = 0
     for (rank, h_s) in enumerate(hand_entries)
@@ -104,8 +101,15 @@ function solve_p1(filename)
     return winnings
 end
 
+solve_p1(fn) = solve(fn, false)
+solve_p2(fn) = solve(fn, true)
+
 test_part_1 = solve_p1("./test.txt")
+test_part_2 = solve_p2("./test.txt")
 
 @assert(test_part_1 == 6440, "Test Part 1 failed, got $test_part_1")
+@assert(test_part_2 == 5905, "Test Part 2 failed, got $test_part_2")
 part_1 = solve_p1("./input.txt")
 println("Part 1: $part_1")
+part_2 = solve_p2("./input.txt")
+println("Part 2: $part_2")
